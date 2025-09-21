@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Публикация постов с фото</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center p-4">
+    <div class="w-full max-w-2xl bg-white rounded-lg shadow-md p-6 mb-6">
+        <h1 class="text-2xl font-bold mb-4 text-center">Создать новый пост</h1>
+        <div class="mb-4">
+            <textarea id="postContent" class="w-full p-2 border rounded-md" rows="4"></textarea>
+        </div>
+        <div class="mb-4 flex justify-center">
+            <input type="file" id="postImage" accept="image/*" class="p-2 border rounded-md text-center" />
+        </div>
+        <button onclick="publishPost()" class="w-full bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600">Опубликовать</button>
+    </div>
+
+    <div id="postsContainer" class="w-full max-w-2xl space-y-4">
+        <!-- Посты будут добавляться сюда -->
+    </div>
+
+    <script>
+        function publishPost() {
+            const postContent = document.getElementById('postContent').value.trim();
+            const postImage = document.getElementById('postImage').files[0];
+
+            if (!postContent && !postImage) {
+                alert('Пожалуйста, добавьте текст или изображение для поста!');
+                return;
+            }
+
+            const postElement = document.createElement('div');
+            postElement.className = 'bg-white p-4 rounded-lg shadow-md';
+
+            let postHTML = '';
+            if (postContent) {
+                postHTML += `<p class="text-gray-800">${postContent}</p>`;
+            }
+
+            if (postImage) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    postHTML += `<img src="${e.target.result}" class="w-full max-w-md mt-2 rounded-md" alt="Uploaded image" />`;
+                    postHTML += `<p class="text-gray-500 text-sm mt-2">Опубликовано: ${new Date().toLocaleString('ru-RU')}</p>`;
+                    postElement.innerHTML = postHTML;
+                };
+                reader.readAsDataURL(postImage);
+            } else {
+                postHTML += `<p class="text-gray-500 text-sm mt-2">Опубликовано: ${new Date().toLocaleString('ru-RU')}</p>`;
+                postElement.innerHTML = postHTML;
+            }
+
+            const postsContainer = document.getElementById('postsContainer');
+            postsContainer.prepend(postElement);
+            document.getElementById('postContent').value = '';
+            document.getElementById('postImage').value = '';
+        }
+    </script>
+</body>
+</html>

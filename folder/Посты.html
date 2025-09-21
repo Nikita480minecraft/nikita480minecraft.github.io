@@ -23,6 +23,26 @@
     </div>
 
     <script>
+        // Загрузка сохраненных постов при открытии страницы
+        window.onload = function() {
+            const savedPosts = JSON.parse(localStorage.getItem('posts') || '[]');
+            const postsContainer = document.getElementById('postsContainer');
+            savedPosts.forEach(post => {
+                const postElement = document.createElement('div');
+                postElement.className = 'bg-white p-4 rounded-lg shadow-md';
+                let postHTML = '';
+                if (post.content) {
+                    postHTML += `<p class="text-gray-800">${post.content}</p>`;
+                }
+                if (post.image) {
+                    postHTML += `<img src="${post.image}" class="w-full max-w-md mt-2 rounded-md" alt="Uploaded image" />`;
+                }
+                postHTML += `<p class="text-gray-500 text-sm mt-2">Опубликовано: ${post.timestamp}</p>`;
+                postElement.innerHTML = postHTML;
+                postsContainer.appendChild(postElement);
+            });
+        };
+
         function publishPost() {
             const postContent = document.getElementById('postContent').value.trim();
             const postImage = document.getElementById('postImage').files[0];
@@ -36,6 +56,9 @@
             postElement.className = 'bg-white p-4 rounded-lg shadow-md';
 
             let postHTML = '';
+            const timestamp = new Date().toLocaleString('ru-RU');
+            const postData = { content: postContent, timestamp: timestamp };
+
             if (postContent) {
                 postHTML += `<p class="text-gray-800">${postContent}</p>`;
             }
@@ -44,19 +67,28 @@
                 const reader = new FileReader();
                 reader.onload = function (e) {
                     postHTML += `<img src="${e.target.result}" class="w-full max-w-md mt-2 rounded-md" alt="Uploaded image" />`;
-                    postHTML += `<p class="text-gray-500 text-sm mt-2">Опубликовано: ${new Date().toLocaleString('ru-RU')}</p>`;
+                    postHTML += `<p class="text-gray-500 text-sm mt-2">Опубликовано: ${timestamp}</p>`;
                     postElement.innerHTML = postHTML;
+                    postData.image = e.target.result; // Сохраняем изображение в формате Data URL
+                    savePost(postData);
                 };
                 reader.readAsDataURL(postImage);
             } else {
-                postHTML += `<p class="text-gray-500 text-sm mt-2">Опубликовано: ${new Date().toLocaleString('ru-RU')}</p>`;
+                postHTML += `<p class="text-gray-500 text-sm mt-2">Опубликовано: ${timestamp}</p>`;
                 postElement.innerHTML = postHTML;
+                savePost(postData);
             }
 
             const postsContainer = document.getElementById('postsContainer');
             postsContainer.prepend(postElement);
             document.getElementById('postContent').value = '';
             document.getElementById('postImage').value = '';
+        }
+
+        function savePost(postData) {
+            const savedPosts = JSON.parse(localStorage.getItem('posts') || '[]');
+            savedPosts.unshift(postData); // Добавляем новый пост в начало массива
+            localStorage.setItem('posts', JSON.stringify(savedPosts));
         }
     </script>
 </body>

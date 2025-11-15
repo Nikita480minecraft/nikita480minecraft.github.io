@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Поисковик фото</title>
+</head>
+<body>
+<div style="text-align:center"> <h1> <font class="gradient-text">Поисковик фото</font> </h1> </div>
+<div style="text-align:center">
+<input type="text" id="searchInput" placeholder="Введите слово...">
+<button onclick="searchWord()">Поиск</button>
+</div>
+<script>
+        function searchWord() {
+            const word = document.getElementById('searchInput').value.toLowerCase();
+
+            if (word === 'Тёмный лес') {
+                window.location.href = '/folder/Тёмный лес.html';
+            } else if (word === 'Зима') {
+                window.location.href = '/folder/Зима.html';
+            } else {
+                alert('Слово не найдено!');
+            }
+        }
+
+        // Для Enter
+        document.getElementById('searchInput').addEventListener('keydown', function(event) {
+            if (event.key === 'Enter') {
+                searchWord();
+            }
+        });
+    </script>
+<style>
+.gradient-text {
+  font-size: 3rem;
+  background: linear-gradient(to right, #ffff00, #ff8700); 
+  -webkit-background-clip: text; 
+  -webkit-text-fill-color: transparent;
+  background-clip: text; 
+    }
+input[type="text"] {
+            padding: 10px;
+            font-size: 16px;
+            width: 200px;
+        }
+button {
+            padding: 10px 15px;
+            font-size: 16px;
+            margin-left: 5px;
+            cursor: pointer;
+        }
+body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+</style>
+</body>
+</html>

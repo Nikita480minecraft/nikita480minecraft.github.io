@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Квантовое бессмертие</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 50px;
+            background-color: #f0f0f0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+        }
+        .button {
+            padding: 15px 30px;
+            font-size: 18px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 20px 0;
+        }
+        .button:hover {
+            background-color: #0056b3;
+        }
+        .result {
+            margin: 20px 0;
+            font-size: 20px;
+            min-height: 40px;
+        }
+        .stats {
+            margin-top: 20px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Квантовое бессмертие</h1>
+        <p>Нажмите кнопку, чтобы «наблюдать» за атомом урана. С вероятностью 50 % он распадётся.</p>
+        <button class="button" id="checkButton">Проверить атом</button>
+        <div class="result" id="result"></div>
+        <div class="stats" id="stats">
+            Попыток: 0 | Распадов: 0 | Выживаний: 0
+        </div>
+    </div>
+
+    <script>
+        let attempts = 0;
+        let decays = 0;
+        let survives = 0;
+
+        const resultElement = document.getElementById('result');
+        const statsElement = document.getElementById('stats');
+        const button = document.getElementById('checkButton');
+
+        button.addEventListener('click', () => {
+            // Генерируем случайное число: 0 или 1 (50 % вероятность)
+            const decayed = Math.random() < 0.5;
+
+            attempts++;
+            
+            if (decayed) {
+                decays++;
+                resultElement.innerHTML = '<span style="color: red;">⚫ Атом распался! Вы погибли.</span>';
+            } else {
+                survives++;
+                resultElement.innerHTML = '<span style="color: green;">⚪ Атом стабилен. Вы живы!</span>';
+            }
+
+            // Обновляем статистику
+            statsElement.textContent = 
+                `Попыток: ${attempts} | Распадов: ${decays} | Выживаний: ${survives}`;
+        });
+    </script>
+</body>
+</html>

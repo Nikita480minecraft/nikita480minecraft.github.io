@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<title>Симулятор эпидемии</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  body {
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    max-width: 1100px;
+    margin: 30px auto;
+    padding: 0 20px;
+    background: #f8f9fa;
+  }
+  .controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 15px;
+    margin-bottom: 25px;
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+  }
+  .param {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  label {
+    font-weight: 600;
+    color: #333;
+  }
+  input[type="number"], input[type="range"] {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 1rem;
+  }
+  input[type="range"] {
+    width: 100%;
+  }
+  .value-show {
+    font-size: 0.9em;
+    color: #555;
+    text-align: right;
+  }
+  button {
+    padding: 12px 24px;
+    font-size: 1.1rem;
+    background: #e63946;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.2s;
+    grid-column: 1 / -1;
+  }
+  button:hover {
+    background: #d00000;
+  }
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 15px;
+    margin: 20px 0;
+    text-align: center;
+  }
+  .stat-box {
+    background: white;
+    padding: 15px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  .canvas-container {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+  }
+</style>
+</head>
+<body>
+
+<h1>Симулятор эпидемии (SIR-модель)</h1>
+
+<div class="controls">
+  <div class="param">
+    <label>Начальное население:</label>
+    <input type="number" id="population" value="1000000" min="1000" step="10000">
+    <div class="value-show">1 000 000</div>
+  </div>
+
+  <div class="param">
+    <label>Начальное количество больных:</label>
+    <input type="number" id="initial_infected" value="10" min="1">
+    <div class="value-show">10 человек</div>
+  </div>
+
+  <div class="param">
+    <label>Заразность (β): <span id="beta_value">0.30</span></label>
+    <input type="range" id="beta" min="0.01" max="1" step="0.01" value="0.30">
+  </div>
+
+  <div class="param">
+    <label>Смертность (μ): <span id="mu_value">0.015</span></label>
+    <input type="range" id="mu" min="0" max="0.2" step="0.001" value="0.015">
+  </div>
+
+  <div class="param">
+    <label>Скорость выздоровления (γ): <span id="gamma_value">0.10</span></label>
+    <input type="range" id="gamma" min="0.01" max="0.5" step="0.01" value="0.10">
+  </div>
+
+  <button onclick="startSimulation()">Запустить симуляцию</button>
+</div>
+
+<div class="stats">
+  <div class="stat-box">
+    <div>Здоровые</div>
+    <div id="healthy" style="font-size:1.6rem; color:#2a9d8f">—</div>
+  </div>
+  <div class="stat-box">
+    <div>Инфицированные</div>
+    <div id="infected" style="font-size:1.6rem; color:#e63946">—</div>
+  </div>
+  <div class="stat-box">
+    <div>Выздоровевшие</div>
+    <div id="recovered" style="font-size:1.6rem; color:#457b9d">—</div>
+  </div>
+  <div class="stat-box">
+    <div>Погибшие</div>
+    <div id="dead" style="font-size:1.6rem; color:#333">—</div>
+  </div>
+</div>
+
+<div class="canvas-container">
+  <canvas id="myChart" height="280"></canvas>
+</div>
+
+<script>
+// ------------------ Глобальные переменные ------------------
+let chart;
+let population, initial_infected, beta, gamma, mu;
+let S, I, R, D;
+let days = [];
+let S_history = [], I_history = [], R_history = [], D_history = [];
+
+function updateValueDisplays() {
+  document.getElementById('beta_value').textContent = document.getElementById('beta').value;
+  document.getElementById('gamma_value').textContent = document.getElementById('gamma').value;
+  document.getElementById('mu_value').textContent = document.getElementById('mu').value;
+  
+  const pop = document.getElementById('population').value;
+  document.querySelector('#population + .value-show').textContent = 
+    Number(pop).toLocaleString('ru-RU');
+}
+
+document.querySelectorAll('input[type="range"]').forEach(el => {
+  el.addEventListener('input', updateValueDisplays);
+});
+document.getElementById('population').addEventListener('input', updateValueDisplays);
+updateValueDisplays();
+
+function initSimulation() {
+  population = Number(document.getElementById('population').value);
+  initial_infected = Number(document.getElementById('initial_infected').value);
+  
+  beta  = Number(document.getElementById('beta').value);
+  gamma = Number(document.getElementById('gamma').value);
+  mu    = Number(document.getElementById('mu').value);
+
+  S = population - initial_infected;
+  I = initial_infected;
+  R = 0;
+  D = 0;
+
+  days = [0];
+  S_history = [S];
+  I_history = [I];
+  R_history = [R];
+  D_history = [D];
+
+  updateStats();
+}
+
+function updateStats() {
+  document.getElementById('healthy').textContent = Math.round(S).toLocaleString('ru-RU');
+  document.getElementById('infected').textContent = Math.round(I).toLocaleString('ru-RU');
+  document.getElementById('recovered').textContent = Math.round(R).toLocaleString('ru-RU');
+  document.getElementById('dead').textContent     = Math.round(D).toLocaleString('ru-RU');
+}
+
+function step() {
+  const dS = -beta * S * I / population;
+  const dI =  beta * S * I / population - gamma * I - mu * I;
+  const dR =  gamma * I;
+  const dD =  mu * I;
+
+  S += dS;
+  I += dI;
+  R += dR;
+  D += dD;
+
+  // Защита от отрицательных значений
+  if (S < 0) S = 0;
+  if (I < 0) I = 0;
+}
+
+function startSimulation() {
+  initSimulation();
+
+  if (chart) chart.destroy();
+
+  const ctx = document.getElementById('myChart').getContext('2d');
+  
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: days,
+      datasets: [
+        { label: 'Здоровые',    data: S_history, borderColor: '#2a9d8f', tension: 0.2, fill: false },
+        { label: 'Инфицированные', data: I_history, borderColor: '#e63946', tension: 0.2, fill: false },
+        { label: 'Выздоровевшие',  data: R_history, borderColor: '#457b9d', tension: 0.2, fill: false },
+        { label: 'Погибшие',       data: D_history, borderColor: '#333',    tension: 0.2, fill: false }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: { beginAtZero: true, max: population * 1.05 }
+      }
+    }
+  });
+
+  let day = 0;
+  const interval = setInterval(() => {
+    day += 1;
+    step();
+
+    days.push(day);
+    S_history.push(S);
+    I_history.push(I);
+    R_history.push(R);
+    D_history.push(D);
+
+    updateStats();
+    chart.update();
+
+    // Останавливаем, когда почти не осталось больных
+    if (I < 0.5 && day > 20) {
+      clearInterval(interval);
+    }
+
+    // Защита от бесконечного цикла
+    if (day > 1000) clearInterval(interval);
+
+  }, 80);
+}
+</script>
+</body>
+</html>

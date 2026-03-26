@@ -8,201 +8,96 @@
   <div style="text-align:center">
   <h1>Голосовой поиск по сайту</h1>
   <input type="text" id="searchInput" placeholder="Скажите ключевое слово...">
-  <button id="voiceBtn">🎤 Говорить</button>
+  <button id="LangRu">Говорить на Русском</button>
+  <button id="LangEn">Говорить на Английском</button>
   </div>
-<script>
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  <script>
+    // Получаем элементы из DOM
+const searchInput = document.getElementById('searchInput');
+const langRuButton = document.getElementById('LangRu');
+const langEnButton = document.getElementById('LangEn');
 
-if (SpeechRecognition) {
-  const recognition = new SpeechRecognition();
-  let currentLang = 'ru-RU'; // Язык по умолчанию
-  let isListening = false; // Флаг текущего состояния прослушивания
+// Инициализируем распознавание речи
+let recognition;
 
-  // Элементы интерфейса
-  const voiceBtn = document.getElementById('voiceBtn');
-  const searchInput = document.getElementById('searchInput');
-  const langRuBtn = document.getElementById('langRu');
-  const langEnBtn = document.getElementById('langEn');
-
-  // Настройка распознавания с улучшенными параметрами
-  recognition.lang = currentLang;
+if ('webkitSpeechRecognition' in window) {
+  recognition = new webkitSpeechRecognition();
   recognition.continuous = false;
-  recognition.interimResults = true; // Показываем промежуточные результаты
-  recognition.maxAlternatives = 3; // Получаем несколько вариантов распознавания
-
-  // Обновляем интерфейс при выборе языка
-  langRuBtn.addEventListener('click', () => {
-    setLanguage('ru-RU', 'Русский');
-  });
-  langEnBtn.addEventListener('click', () => {
-    setLanguage('en-US', 'English');
-  });
-
-  function setLanguage(langCode, langName) {
-    currentLang = langCode;
-    recognition.lang = langCode;
-
-    // Обновляем стили кнопок
-    langRuBtn.classList.toggle('active', langCode === 'ru-RU');
-    langEnBtn.classList.toggle('active', langCode === 'en-US');
-
-    // Обновляем placeholder
-    searchInput.placeholder =
-      langCode === 'ru-RU'
-        ? 'Скажите ключевое слово...'
-        : 'Say a keyword...';
-
-    // Очищаем поле ввода при смене языка
-    searchInput.value = '';
-  }
-
-  // Обработчик нажатия кнопки голосового поиска
-  voiceBtn.addEventListener('click', toggleListening);
-
-  function toggleListening() {
-    if (isListening) {
-      stopListening();
-    } else {
-      startListening();
-    }
-  }
-
-  function startListening() {
-    isListening = true;
-    voiceBtn.textContent = '⏸️ Остановить';
-    voiceBtn.style.backgroundColor = '#dc3545';
-    recognition.start();
-    console.log(`Начинаю прослушивание (${currentLang})...`);
-  }
-
-  function stopListening() {
-    isListening = false;
-    voiceBtn.textContent = '🎤 Говорить';
-    voiceBtn.style.backgroundColor = '';
-    recognition.stop();
-    console.log('Прослушивание остановлено');
-  }
-
-  // Обработка промежуточных результатов (для отображения в реальном времени)
-  recognition.addEventListener('result', (event) => {
-    let finalTranscript = '';
-    let interimTranscript = '';
-
-    for (let i = event.resultIndex; i < event.results.length; i++) {
-      const transcript = event.results[i][0].transcript;
-      if (event.results[i].isFinal) {
-        finalTranscript += transcript;
-      } else {
-        interimTranscript += transcript;
-      }
-    }
-
-    if (finalTranscript) {
-      searchInput.value = finalTranscript.toLowerCase().trim();
-      navigateToPage(finalTranscript.toLowerCase().trim(), currentLang);
-      stopListening();
-    } else if (interimTranscript) {
-      // Показываем промежуточные результаты
-      searchInput.value = interimTranscript.toLowerCase();
-    }
-  });
-
-  // Обработка окончания распознавания
-  recognition.addEventListener('end', () => {
-    if (isListening) {
-      console.log('Распознавание завершено, перезапуск...');
-      recognition.start(); // Автоматический перезапуск для лучшего распознавания
-    }
-  });
-
-  // Обработка ошибок
-  recognition.addEventListener('error', (event) => {
-    console.error('Ошибка распознавания:', event.error);
-    stopListening();
-
-    const errorMessages = {
-      'no-speech': currentLang === 'ru-RU'
-        ? 'Речь не обнаружена. Попробуйте ещё раз.'
-        : 'No speech detected. Try again.',
-      'audio-capture': currentLang === 'ru-RU'
-        ? 'Проблема с микрофоном. Проверьте подключение.'
-        : 'Microphone problem. Check your connection.',
-      'not-allowed': currentLang === 'ru-RU'
-        ? 'Доступ к микрофону запрещён. Разрешите доступ в настройках браузера.'
-        : 'Microphone access denied. Allow access in browser settings.'
-    };
-
-    alert(errorMessages[event.error] || 'Произошла ошибка распознавания.');
-  });
-
-  // Функция перехода на страницу с улучшенной логикой
-  function navigateToPage(keyword, lang) {
-    // Словарь соответствий: слово → URL
-    const pageMap = {
-      'ru-RU': {
-        'главная страница': 'index.html',
-        'мифы': 'folder/Мифы.html',
-        'свист': 'folder/Свист.html',
-        'гроза': 'folder/Гроза.html',
-        'конечная страница': 'Текст.html',
-        // Синонимы и альтернативные варианты
-        'основная страница': 'index.html',
-        'мифы майнкрафта': 'folder/Мифы.html',
-        'информация об обновлениях': 'Текст.html'
-      },
-      'en-US': {
-        'home': 'index.html',
-        'myths': 'folder/Мифы.html',
-        'whistle': 'folder/Свист.html',
-        'thunder': 'folder/Гроза.html',
-        'ending page': 'folder/Текст.html',
-        // Синонимы и альтернативные варианты
-        'homepage': 'index.html',
-        'myths of minecraft': 'folder/Мифы.html',
-        'info about of updates': 'Текст.html'
-      }
-    };
-
-    // Нормализация ключевого слова (убираем лишние пробелы, приводим к нижнему регистру)
-    const normalizedKeyword = keyword.trim().toLowerCase();
-
-    // Поиск точного совпадения
-    const targetPage = pageMap[lang][normalizedKeyword];
-
-    if (targetPage) {
-      window.location.href = targetPage;
-    } else {
-      // Поиск частичного совпадения (если точное не найдено)
-      const matchedKey = Object.keys(pageMap[lang]).find(key =>
-        normalizedKeyword.includes(key) || key.includes(normalizedKeyword)
-      );
-
-      if (matchedKey) {
-        window.location.href = pageMap[lang][matchedKey];
-      } else {
-        const notFoundMsg = lang === 'ru-RU'
-          ? `Страница для слова "${keyword}" не найдена. Попробуйте сказать по‑другому.`
-          : `Page for "${keyword}" not found. Try saying it differently.`;
-        alert(notFoundMsg);
-      }
-    }
-  }
-
-  // Дополнительные обработчики событий
-  recognition.addEventListener('start', () => {
-    console.log('Распознавание запущено');
-  });
-
-  recognition.addEventListener('audiostart', () => {
-    console.log('Аудиопоток начат');
-  });
-
-  recognition.addEventListener('soundstart', () => {
-    console.log('Обнаружен звук');
-  });
+  recognition.interimResults = false;
 } else {
-  alert('Ваш браузер не поддерживает Web Speech API. Используйте Chrome или Edge.');
+  alert('Ваш браузер не поддерживает распознавание речи. Используйте Chrome.');
 }
-</script>
+
+// Функция для запуска распознавания на русском
+function startRecognitionRu() {
+  if (!recognition) return;
+  
+  recognition.lang = 'ru-RU';
+  recognition.start();
+}
+
+// Функция для запуска распознавания на английском
+function startRecognitionEn() {
+  if (!recognition) return;
+  
+  recognition.lang = 'en-US';
+  recognition.start();
+}
+
+// Обработчик результата распознавания
+recognition.onresult = function(event) {
+  const transcript = event.results[0][0].transcript.toLowerCase().trim();
+  searchInput.value = transcript;
+  handleSearch(transcript);
+};
+
+// Обработчик ошибок распознавания
+recognition.onerror = function(event) {
+  console.error('Ошибка распознавания речи:', event.error);
+  alert('Произошла ошибка при распознавании речи. Попробуйте ещё раз.');
+};
+
+// Функция обработки поискового запроса и перенаправления
+function handleSearch(query) {
+  // Словарь ключевых слов и соответствующих страниц (с указанием папок)
+  const searchMap = {
+    'мифы': 'folder/Мифы.html',
+    'легенды': 'folder/Легенды.html',
+    'свист': 'folder/Свист.html',
+    'главная': 'index.html',
+    'ночь': 'folder/Ночь.html',
+    'ночь 2': 'folder/Ночь 2.html',
+    'гифки': 'folder/Гифки.html',
+    'музыка': 'folder/Музыка.html',
+    'home': 'index.html',
+    'updates': 'Текст.html'
+  };
+
+  // Приводим запрос к нижнему регистру для сравнения
+  const normalizedQuery = query.toLowerCase();
+
+  // Ищем соответствие в словаре
+  for (const [keyword, page] of Object.entries(searchMap)) {
+    if (normalizedQuery.includes(keyword)) {
+      window.location.href = page;
+      return;
+    }
+  }
+
+  // Если ничего не найдено, показываем сообщение
+  alert(`Страница для запроса "${query}" не найдена.`);
+}
+
+// Добавляем обработчики событий для кнопок
+langRuButton.addEventListener('click', startRecognitionRu);
+langEnButton.addEventListener('click', startRecognitionEn);
+
+// Также добавляем возможность искать по нажатию Enter в поле ввода
+searchInput.addEventListener('keypress', function(event) {
+  if (event.key === 'Enter') {
+    handleSearch(searchInput.value);
+  }
+});
+  </script>
 </body>
 </html>

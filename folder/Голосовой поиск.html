@@ -23,7 +23,8 @@ let recognition;
 if ('webkitSpeechRecognition' in window) {
   recognition = new webkitSpeechRecognition();
   recognition.continuous = false;
-  recognition.interimResults = false;
+  recognition.interimResults = true; // Включаем промежуточные результаты для плавности
+  recognition.maxAlternatives = 3; // Получаем несколько вариантов распознавания
 } else {
   alert('Ваш браузер не поддерживает распознавание речи. Используйте Chrome.');
 }
@@ -31,36 +32,85 @@ if ('webkitSpeechRecognition' in window) {
 // Функция для запуска распознавания на русском
 function startRecognitionRu() {
   if (!recognition) return;
-  
+
   recognition.lang = 'ru-RU';
   recognition.start();
+  updateButtonState(true);
 }
 
 // Функция для запуска распознавания на английском
 function startRecognitionEn() {
   if (!recognition) return;
-  
+
   recognition.lang = 'en-US';
   recognition.start();
+  updateButtonState(true);
+}
+
+// Обновляем состояние кнопок
+function updateButtonState(isListening) {
+  langRuButton.disabled = isListening;
+  langEnButton.disabled = isListening;
+  if (isListening) {
+    langRuButton.style.opacity = '0.6';
+    langEnButton.style.opacity = '0.6';
+  } else {
+    langRuButton.style.opacity = '1';
+    langEnButton.style.opacity = '1';
+  }
 }
 
 // Обработчик результата распознавания
 recognition.onresult = function(event) {
-  const transcript = event.results[0][0].transcript.toLowerCase().trim();
-  searchInput.value = transcript;
-  handleSearch(transcript);
+  let bestTranscript = '';
+  let maxConfidence = 0;
+
+  // Анализируем все альтернативы для лучшего результата
+  for (let i = event.results.length - 1; i >= 0; i--) {
+    const result = event.results[i];
+    for (let j = 0; j < result.length; j++) {
+      const alternative = result[j];
+      if (alternative.confidence > maxConfidence) {
+        maxConfidence = alternative.confidence;
+        bestTranscript = alternative.transcript.toLowerCase().trim();
+      }
+    }
+  }
+
+  if (bestTranscript) {
+    searchInput.value = bestTranscript;
+    handleSearch(bestTranscript, maxConfidence);
+  }
+};
+
+// Обработчик окончания распознавания
+recognition.onend = function() {
+  updateButtonState(false);
 };
 
 // Обработчик ошибок распознавания
 recognition.onerror = function(event) {
   console.error('Ошибка распознавания речи:', event.error);
-  alert('Произошла ошибка при распознавании речи. Попробуйте ещё раз.');
+  updateButtonState(false);
+
+  const errorMessages = {
+    'not-allowed': 'Доступ к микрофону запрещён. Разрешите доступ в настройках.',
+    'no-speech': 'Речь не обнаружена. Попробуйте ещё раз.',
+    'audio-capture': 'Ошибка захвата аудио. Проверьте микрофон.',
+    'network': 'Сетевая ошибка. Проверьте подключение к интернету.'
+  };
+
+  alert(errorMessages[event.error] || 'Произошла ошибка при распознавании речи. Попробуйте ещё раз.');
 };
 
 // Функция обработки поискового запроса и перенаправления
-function handleSearch(query) {
+function handleSearch(query, confidence = 1) {
+  // Порог уверенности (если уверенность ниже — запрашиваем подтверждение)
+  const CONFIDENCE_THRESHOLD = 0.7;
+
   // Словарь ключевых слов и соответствующих страниц (с указанием папок)
   const searchMap = {
+    // Основные варианты
     'мифы': './Мифы.html',
     'легенды': './Легенды.html',
     'свист': './Свист.html',
@@ -69,8 +119,17 @@ function handleSearch(query) {
     'ночь 2': './Ночь 2.html',
     'гифки': './Гифки.html',
     'музыка': './Музыка.html',
-    'home': '/index.html',
-    'updates': '/Текст.html'
+    'home': 'index.html',
+    'updates': 'Текст.html',
+
+    // Синонимы и альтернативные варианты
+    'миф': './Мифы.html',
+    'легенда': './Легенды.html',
+    'свистать': './Свист.html',
+    'стартовая': 'index.html',
+    'главная страница': 'index.html',
+    'анимации': './Гифки.html',
+    'звуки': './Музыка.html'
   };
 
   // Приводим запрос к нижнему регистру для сравнения
@@ -79,13 +138,24 @@ function handleSearch(query) {
   // Ищем соответствие в словаре
   for (const [keyword, page] of Object.entries(searchMap)) {
     if (normalizedQuery.includes(keyword)) {
+      // Если уверенность низкая, запрашиваем подтверждение
+      if (confidence < CONFIDENCE_THRESHOLD) {
+        const userConfirm = confirm(`Вы сказали "${query}"? Перейти на страницу?`);
+        if (!userConfirm) return;
+      }
+
+      console.log(`Переход на ${page} (уверенность: ${(confidence * 100).toFixed(1)}%)`);
       window.location.href = page;
       return;
     }
   }
 
   // Если ничего не найдено, показываем сообщение
-  alert(`Страница для запроса "${query}" не найдена.`);
+  if (confidence < CONFIDENCE_THRESHOLD) {
+    alert(`Не удалось распознать команду "${query}". Попробуйте ещё раз.`);
+  } else {
+    alert(`Страница для запроса "${query}" не найдена.`);
+  }
 }
 
 // Добавляем обработчики событий для кнопок
@@ -95,9 +165,22 @@ langEnButton.addEventListener('click', startRecognitionEn);
 // Также добавляем возможность искать по нажатию Enter в поле ввода
 searchInput.addEventListener('keypress', function(event) {
   if (event.key === 'Enter') {
-    handleSearch(searchInput.value);
+    handleSearch(searchInput.value, 1); // Уверенность 100% для ручного ввода
   }
 });
+
+// Добавляем визуальный индикатор прослушивания
+if (recognition) {
+  recognition.onstart = function() {
+    searchInput.style.borderColor = 'green';
+    searchInput.style.boxShadow = '0 0 5px green';
+  };
+
+  recognition.onend = function() {
+    searchInput.style.borderColor = '';
+    searchInput.style.boxShadow = '';
+  };
+}
   </script>
 </body>
 </html>

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Голосовой поиск</title>
+</head>
+<body>
+  <div style="text-align:center">
+  <h1>Голосовой поиск по сайту</h1>
+  <input type="text" id="searchInput" placeholder="Скажите ключевое слово...">
+  <button id="voiceBtn">🎤 Говорить</button>
+  </div>
+<script>
+  // Проверяем поддержку Web Speech API
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+if (SpeechRecognition) {
+  const recognition = new SpeechRecognition();
+  recognition.lang = 'ru-RU'; // Язык распознавания
+  recognition.continuous = false; // Останавливается после паузы
+  recognition.interimResults = false; // Не показываем промежуточные результаты
+
+  const voiceBtn = document.getElementById('voiceBtn');
+  const searchInput = document.getElementById('searchInput');
+
+  // Обработчик нажатия кнопки
+  voiceBtn.addEventListener('click', () => {
+    recognition.start();
+    console.log('Слушаю...');
+  });
+
+  // Обработка результата распознавания
+  recognition.addEventListener('result', (event) => {
+    const transcript = event.results[0][0].transcript.toLowerCase().trim();
+    searchInput.value = transcript;
+    navigateToPage(transcript); // Переходим на страницу
+  });
+
+  // Обработка ошибок
+  recognition.addEventListener('error', (event) => {
+    console.error('Ошибка распознавания:', event.error);
+    alert('Не удалось распознать речь. Попробуйте ещё раз.');
+  });
+
+  recognition.addEventListener('end', () => {
+    console.log('Распознавание завершено');
+  });
+} else {
+  alert('Ваш браузер не поддерживает Web Speech API. Используйте Chrome или Edge.');
+}
+
+// Функция перехода на страницу по ключевому слову
+function navigateToPage(keyword) {
+  // Словарь соответствий: слово → URL
+  const pageMap = {
+    'главная страница': 'index.html',
+    'мифы': 'Мифы.html',
+    'музыка': 'Музыка.html',
+    'свист': 'Свист.html',
+    'крипипаста про universe sandbox': 'Крипипаста про Universe sandbox.html'
+  };
+
+  const targetPage = pageMap[keyword];
+  if (targetPage) {
+    window.location.href = targetPage;
+  } else {
+    alert(`Страница для слова "${keyword}" не найдена.`);
+  }
+}
+</script>
+</body>
+</html>
